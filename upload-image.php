@@ -55,7 +55,7 @@
 //        echo $upload_path;
 
 
-        $filename = "3XSocializer_".uniqid();
+        $filename = "".uniqid();
 
         if (!is_dir(getcwd().'/../../../'.$upload_path)) {
             mkdir(getcwd().'/../../../'.$upload_path,0777,true);

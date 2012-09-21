@@ -3,7 +3,7 @@
 Plugin Name: 3XSocializer
 Plugin URI: DonCrowther.com
 Description: Social Sharing Utility
-Version: 0.98.19
+Version: 0.98.20
 Author: Don Crowther
 Author URI: http://doncrowther.com
 License: GPL2
