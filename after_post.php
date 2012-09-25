@@ -3,8 +3,8 @@
 ?>
 <div class="wrap">
 Sharing screen after publish:&nbsp;&nbsp;&nbsp;
-    <input type="radio" name="txs_open" value="on">On&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <input type="radio" name="txs_open" value="off" checked>Off<hr>
+    <input type="radio" name="txs_open" value="on" checked>On&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <input type="radio" name="txs_open" value="off">Off<hr>
 
     <?php echo '<input type="hidden" name="eventmeta_noncename" id="eventmeta_noncename" value="'.wp_create_nonce('3Xsocial').'" />';?>
     <div class="screenr_container">

@@ -3,7 +3,7 @@
 Plugin Name: 3XSocializer
 Plugin URI: DonCrowther.com
 Description: Social Sharing Utility
-Version: 0.98.20
+Version: 0.98.22
 Author: Don Crowther
 Author URI: http://doncrowther.com
 License: GPL2
@@ -137,7 +137,7 @@ if (!class_exists('TXSocial')) {
             if(isset($_POST['fb_publish']) && $_POST['fb_publish'] == "on"){
                 if (trim($_POST['fb_post']) != ""){
                     $social_post = array(
-                        "title"     => !empty($_POST['post_title']) ? $_POST['post_title'] : "Custom share post",
+                        "title"     => !empty($_POST['post_title']) ? $_POST['post_title'] : (strlen($_POST['fb_post']) > 100 ? substr($_POST['fb_post'], 0 ,100)."..." : $_POST['fb_post']),
                         "post"      => $_POST['fb_post'],
                         "origin_id" => $_POST['origin_id'],
                         "network"   => "fb",
@@ -376,19 +376,57 @@ if (!class_exists('TXSocial')) {
         }
 
         function linkedin_publish($ln_account, $message) {
-            $oauth = new OAuth($ln_account->consumer_key, $ln_account->consumer_secret);
-            $oauth->setToken($ln_account->access_token, $ln_account->access_token_secret);
+            if (!class_exists("OAuth"))
+                require_once("OAuth.php");
 
-            $method = OAUTH_HTTP_METHOD_PUT;
+            $domain = "https://api.linkedin.com/uas/oauth";
+            $sig_method = new OAuthSignatureMethod_HMAC_SHA1();
 
-            $url = "http://api.linkedin.com/v1/people/~/current-status";
 
+            $test_consumer = new OAuthConsumer($ln_account->consumer_key, $ln_account->consumer_secret, NULL);
+
+
+            $endpoint = "http://api.linkedin.com/v1/people/~/current-status";
             $body = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><current-status>".$message."</current-status>";
-            try {
-                $oauth->fetch($url, $body, $method);
-                return true;
-            } catch(OAuthException $e) {
+            $fp = fopen('php://temp/maxmemory:256000', 'w');
+            if (!$fp) {
+                die('could not open temp memory data');
+            }
+            fwrite($fp, $body);
+            fseek($fp, 0);
+
+            //$req_token = new OAuthConsumer($oauth['oauth_token'], $oauth['oauth_token_secret'], 1);
+            $req_token = new OAuthConsumer($ln_account->access_token, $ln_account->access_token_secret, 1);
+            //$profile_req = OAuthRequest::from_consumer_and_token($test_consumer, $req_token, "GET", $endpoint, array("name" => "intercom")); # but no + symbol here!
+            $profile_req = OAuthRequest::from_consumer_and_token($test_consumer, $req_token, "PUT", $endpoint, array());
+            //$profile_req =
+            $profile_req->sign_request($sig_method, $test_consumer, $req_token);
+
+
+            $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($ch, CURLOPT_PUT, 1);
+            curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
+            curl_setopt($ch, CURLOPT_INFILE, $fp); // file pointer
+            curl_setopt($ch, CURLOPT_INFILESIZE, strlen($body));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                $profile_req->to_header()
+            ));
+            curl_setopt($ch, CURLOPT_URL, $endpoint);
+            $output = curl_exec($ch);
+
+
+            if (curl_errno($ch)) {
+                echo 'Curl error 2: ' . curl_error($ch);
                 return false;
+            }
+            curl_close($ch);
+            if (trim($output) == ''){
+               return true;
+            } else {
+               return false;
             }
         }
 
@@ -453,7 +491,7 @@ if (!class_exists('TXSocial')) {
                 if(isset($_POST['tw_publish']) && $_POST['tw_publish'] == "on"){
                     if (trim($_POST['tw_post']) != ""){
                         $social_post = array(
-                            "title"     => !empty($_POST['post_title']) ? $_POST['post_title'] : "Custom share post",
+                            "title"     => !empty($_POST['post_title']) ? $_POST['post_title'] : (strlen($_POST['tw_post']) > 100 ? substr($_POST['tw_post'], 0 ,100)."..." : $_POST['tw_post']),
                             "post"      => $_POST['tw_post'],
                             "origin_id" => $_POST['origin_id'],
                             "network"   => "tw",
@@ -473,7 +511,7 @@ if (!class_exists('TXSocial')) {
                 if(isset($_POST['ln_publish']) && $_POST['ln_publish'] == "on"){
                     if (trim($_POST['ln_post']) != ""){
                         $social_post = array(
-                            "title"     => !empty($_POST['post_title']) ? $_POST['post_title'] : "Custom share post",
+                            "title"     => !empty($_POST['post_title']) ? $_POST['post_title'] : (strlen($_POST['ln_post']) > 100 ? substr($_POST['ln_post'], 0 ,100)."..." : $_POST['ln_post']),
                             "post"      => $_POST['ln_post'],
                             "origin_id" => $_POST['origin_id'],
                             "network"   => "ln",
@@ -634,16 +672,38 @@ if (!class_exists('TXSocial')) {
                 }
             } elseif (isset($_GET['oauth_verifier']) && isset($_GET['linkedin_callback']) && $_GET['linkedin_callback'] == true){
                 $settings = $wpdb->get_row("select ln_ck, ln_cs from ".$wpdb->prefix."_3xs_settings where id = 1");
-                $oauth = new OAuth($settings->ln_ck, $settings->ln_cs);
-                $oauth->setToken(get_option('ln_oauth_token'), get_option('ln_oauth_token_secret'));
+                if (!class_exists("OAuth"))
+                    require_once("OAuth.php");
+                $domain = "https://api.linkedin.com/uas/oauth";
+                $sig_method = new OAuthSignatureMethod_HMAC_SHA1();
+                $test_consumer = new OAuthConsumer($settings->ln_ck, $settings->ln_cs, NULL);
 
-                $access_token_url = 'https://api.linkedin.com/uas/oauth/accessToken';
-                $access_token_response = $oauth->getAccessToken($access_token_url, "", $_GET['oauth_verifier']);
+                $req_token = new OAuthConsumer(get_option('ln_oauth_token'), get_option('ln_oauth_token_secret'), 1);
 
-                if($access_token_response === FALSE) {
+                $acc_req = OAuthRequest::from_consumer_and_token($test_consumer, $req_token, "POST", $domain . '/accessToken');
+                $acc_req->set_parameter("oauth_verifier", $_REQUEST['oauth_verifier']); # need the verifier too!
+                $acc_req->sign_request($sig_method, $test_consumer, $req_token);
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_POSTFIELDS, ''); //New Line
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                    $acc_req->to_header()
+                ));
+                curl_setopt($ch, CURLOPT_URL, $domain . "/accessToken");
+                curl_setopt($ch, CURLOPT_POST, 1);
+                $output = curl_exec($ch);
+                if (curl_errno($ch)) {
+                    echo 'Curl error 1: ' . curl_error($ch);
+                }
+                curl_close($ch);
+                parse_str($output, $oauth);
+
+                if (!isset($oauth['oauth_token'])){
                     throw new Exception("Failed fetching request token, response was: " . $oauth->getLastResponse());
                 } else {
-                    $access_token = $access_token_response;
+                    $access_token = $oauth;
                 }
 
                 $check = $wpdb->get_results("SELECT * FROM ".$this->tbl_ln_accounts." where name='LinkedIn'");

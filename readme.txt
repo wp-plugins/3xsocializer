@@ -4,7 +4,7 @@ Contributors: cturnbull, ivan.koval
 Tags: 3xSocial, 3xSocializer, Don Crowther, social, social network, sharing
 Requires at least: 3.4.2
 Tested up to: 3.4.2
-Stable tag: 0.98.20
+Stable tag: 0.98.22
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,3 +57,9 @@ __IMPORTANT!__ If you previously installed 3xSocializer plugin from a zip file a
 
 = 0.98.20 =
 * Uploaded snapshots no longer include "3xsocializer" in the filename.
+
+= 0.98.22 =
+* Standard license sharing utility is not prepopulating content - fixed.
+* Sharing utility now only displays published and scheduled posts, not those in the trash.
+* "Go to Sharing utility" option in Add New Post checked by default.
+* Social Posts shows content excerpt to aid identification.

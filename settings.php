@@ -162,8 +162,8 @@ $account_types = array(
 
 <!--    LINKEDIN-->
     <?php
+    if (false){
 //    if($ln_configured){
-    if(false){
         ?>
 
         <div class="tx_asm_record">
@@ -174,8 +174,8 @@ $account_types = array(
 
         <?php
         generatePopupForm('ln', $action_url, $settings);
-    //} else {
     }
+//    } else {
     if (false){
         echo "LinkedIn - enter your application credentials <a style='cursor: pointer' onclick=\"showPopup('ln_add')\">here first.</a>";
         echo "<img onclick=\"helpPopup('".$this->plugin_url."help/linkedin.php')\" style='position: relative; top: 6px; left: 6px; cursor: pointer;' src='".$this->plugin_url."images/help_icon.png'></a>";
@@ -319,24 +319,47 @@ $account_types = array(
         <?php endforeach; ?>
 
     <?php
-    if(false){
 //    if($ln_configured){
-        $oauth = new OAuth($settings->ln_ck, $settings->ln_cs);
+    if (false){
+        if (!class_exists("OAuth"))
+            require_once("OAuth.php");
+        $domain = "https://api.linkedin.com/uas/oauth";
+        $sig_method = new OAuthSignatureMethod_HMAC_SHA1();
 
-            $request_token_response = $oauth->getRequestToken('https://api.linkedin.com/uas/oauth/requestToken',$action_url."&linkedin_callback=true");
-            $request_token = $request_token_response;
-            update_option('ln_oauth_token', $request_token['oauth_token']);
-            update_option('ln_oauth_token_secret', $request_token['oauth_token_secret']);
+        $test_consumer = new OAuthConsumer($settings->ln_ck, $settings->ln_cs, NULL);
+        $callback = $action_url."&linkedin_callback=true";
 
-            if($request_token_response === FALSE) {
-                throw new Exception("Failed fetching request token, response was: " . $oauth->getLastResponse());
-            } else {
-               $url = "https://api.linkedin.com/uas/oauth/authorize?oauth_token=".$request_token['oauth_token'];
-               echo "<a href='$url'>Add your LinkedIn account</a>";
-            }
+        $req_req = OAuthRequest::from_consumer_and_token($test_consumer, NULL, "POST", $domain . "/requestToken");
+        $req_req->set_parameter("oauth_callback", $callback); # part of OAuth 1.0a - callback now in requestToken
+        $req_req->sign_request($sig_method, $test_consumer, NULL);
 
-//    } else {
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, '');
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            $req_req->to_header()
+        ));
+        curl_setopt($ch, CURLOPT_URL, $domain . "/requestToken");
+        curl_setopt($ch, CURLOPT_POST, 1);
+        $output = curl_exec($ch);
+        curl_close($ch);
+
+        parse_str($output, $oauth);
+
+        update_option('ln_oauth_token', $oauth['oauth_token']);
+        update_option('ln_oauth_token_secret', $oauth['oauth_token_secret']);
+
+        if(!isset($oauth['oauth_token'])) {
+           echo "Something wrong, please recheck your LinkedIn App Credentials". $output;
+        } else {
+           $url = "https://api.linkedin.com/uas/oauth/authorize?oauth_token=".$oauth['oauth_token'];
+           echo "<a href='$url'>Add your LinkedIn account</a>";
+        }
     }
+//    } else {
     if (false){
         echo "<i>Please, enter your LinkedIn application credentials first</i>";
     }

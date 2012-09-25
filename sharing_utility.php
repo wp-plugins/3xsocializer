@@ -34,7 +34,7 @@ if (isset($result->success))
 }
 
 if ($activated){
-$myposts = get_posts(array('post_status' => 'publish future', 'numberposts' => -1));
+$myposts = get_posts(array('post_status' => 'publish, future', 'numberposts' => -1));
 $myaccouts = $wpdb->get_results("SELECT * FROM `" . $this->tbl_account_sets . "`", ARRAY_A);
 //echo var_dump($myaccouts);
 $current_post = null;

@@ -63,9 +63,11 @@ function updateLength(element,area){
     $(element).innerHTML = area.value.length+' characters';
 }
 function postChanged(type){
-    if (type == 'set' && $('account_set_id').value <= 0)
-        return;
-    location.href=location.href.substr(0,location.href.indexOf("admin.php"))+"admin.php?page=txsocializer&post_id="+$('post_id').value+"&account_set="+$('account_set_id').value;
+    if ($('account_set_id'))
+        if (type == 'set' && $('account_set_id').value <= 0)
+            return;
+    var account_set = $('account_set_id') ? $('account_set_id') : "";
+    location.href=location.href.substr(0,location.href.indexOf("admin.php"))+"admin.php?page=txsocializer&post_id="+$('post_id').value+"&account_set="+account_set;
 }
 function setCustomSet(){
     if ($('account_set_id'))
